@@ -1,4 +1,4 @@
-Premierium ratings - run of 2026-10-17 11:39 UTC (took 0:02)
+Premierium ratings - run of 2026-10-17 13:55 UTC (took 0:03)
 
 Movies: 106040 to rate, 106040 looked up, 30234 with a critics score, 60127 with an audience score, 61524 in the file
 Shows: 19685 to rate, 19685 looked up, 4038 with a critics score, 5557 with an audience score, 6030 in the file
