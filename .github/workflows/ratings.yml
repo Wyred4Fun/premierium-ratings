@@ -1,0 +1,60 @@
+name: Build ratings
+
+# Once a day: looks up Rotten Tomatoes scores (critics and audience) on MDBList for every well-known movie and show on TMDb, and
+# publishes them as ratings.json.gz in the "latest" release, where every Premierium box reads them. Each run carries on from the
+# last one (state.json.gz, kept in the same release) and stops before MDBList's daily allowance runs out.
+# report.txt says what the last run did. Needs the MDBLIST_API_KEY and TMDB_KEY secrets.
+on:
+  schedule:
+    - cron: '17 7 * * *'
+  workflow_dispatch:
+  push:
+    paths:
+      - 'ratings.py'
+      - '.github/workflows/ratings.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ratings
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Get this repo
+        uses: actions/checkout@v4
+
+      - name: Get the last run's file
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download latest -p state.json.gz || echo "No earlier run - starting fresh"
+
+      - name: Look up the ratings
+        env:
+          MDBLIST_API_KEY: ${{ secrets.MDBLIST_API_KEY }}
+          TMDB_KEY: ${{ secrets.TMDB_KEY }}
+        run: python3 ratings.py
+
+      - name: Publish them
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view latest >/dev/null 2>&1 || \
+            gh release create latest --title "Latest ratings" --notes "Rotten Tomatoes scores for Premierium, rebuilt automatically."
+          gh release upload latest ratings.json.gz state.json.gz --clobber
+
+      - name: Save the report (this also keeps the daily schedule alive)
+        if: always()
+        run: |
+          [ -f report.txt ] || exit 0
+          git config user.name "ratings-bot"
+          git config user.email "ratings-bot@users.noreply.github.com"
+          git add report.txt
+          git commit -m "ratings report" || true
+          git pull --rebase || true
+          git push || true
