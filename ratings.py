@@ -7,9 +7,10 @@
 #      MDBList allowance leaves room for (it never uses the last SAFETY requests).
 #   3. Writes ratings.json.gz for the app and state.json.gz for the next run, and report.txt with what happened.
 #
-# ratings.json.gz: {"v": 2, "made": unix seconds, "movie": {"<tmdb id>": [critics, audience, reviews]}, "tv": {...},
+# ratings.json.gz: {"v": 3, "made": unix seconds, "movie": {"<tmdb id>": [critics, audience, reviews, "name", year]}, "tv": {...},
 #                   "certified": {"movie": [[id, "name", year], ...], "tv": [...]}}
-# A score is 0-100, -1 when Rotten Tomatoes has none; reviews is how many critics' reviews the critics score stands on (-1 not known). Only titles with
+# A score is 0-100, -1 when Rotten Tomatoes has none; reviews is how many critics' reviews the critics score stands on (-1 not known); name and year
+# are TMDb's ("" and 0 when not known), so the app can match a score to any title in a library by its name and year. Only titles with
 # at least one score are listed. "certified" is the Certified Fresh list (CERTIFIED below), best first: what the app's Certified Fresh Collection shows.
 #
 # Needs MDBLIST_API_KEY and TMDB_KEY (repository secrets). Standard library only.
@@ -303,9 +304,18 @@ def main():
     state['rated'] = rated
     state['wanted'] = wanted
     save('state.json.gz', state)
-    out = {'v': 2, 'made': int(time.time()), 'certified': {}}
+    out = {'v': 3, 'made': int(time.time()), 'certified': {}}
+
+    def named(kind, tid):
+        """TMDb's name and year for a title, as the app matches them: ("", 0) when not known."""
+        w = wanted[kind].get(tid)
+        if w is None or len(w) < 3 or not w[2]:
+            return '', 0
+        year = datetime.date.fromordinal(datetime.date(1970, 1, 1).toordinal() + w[0]).year if w[0] >= 0 else 0
+        return w[2], year
+
     for kind in ('movie', 'tv'):
-        out[kind] = {tid: [r[0], r[1], r[3] if len(r) > 3 else -1] for tid, r in rated[kind].items() if r[0] >= 0 or r[1] >= 0}
+        out[kind] = {tid: [r[0], r[1], r[3] if len(r) > 3 else -1] + list(named(kind, tid)) for tid, r in rated[kind].items() if r[0] >= 0 or r[1] >= 0}
         low, reviews = CERTIFIED[kind]
         best = []
         for tid, r in rated[kind].items():
