@@ -7,8 +7,10 @@
 #      MDBList allowance leaves room for (it never uses the last SAFETY requests).
 #   3. Writes ratings.json.gz for the app and state.json.gz for the next run, and report.txt with what happened.
 #
-# ratings.json.gz: {"v": 1, "made": unix seconds, "movie": {"<tmdb id>": [critics, audience]}, "tv": {...}} - a score is 0-100, -1 when
-# Rotten Tomatoes has none. Only titles with at least one score are listed.
+# ratings.json.gz: {"v": 2, "made": unix seconds, "movie": {"<tmdb id>": [critics, audience, reviews]}, "tv": {...},
+#                   "certified": {"movie": [[id, "name", year], ...], "tv": [...]}}
+# A score is 0-100, -1 when Rotten Tomatoes has none; reviews is how many critics' reviews the critics score stands on (-1 not known). Only titles with
+# at least one score are listed. "certified" is the Certified Fresh list (CERTIFIED below), best first: what the app's Certified Fresh Collection shows.
 #
 # Needs MDBLIST_API_KEY and TMDB_KEY (repository secrets). Standard library only.
 import os, sys, json, gzip, time, datetime, urllib.request, urllib.parse, urllib.error
@@ -19,6 +21,8 @@ MIN_VOTES = 10
 SAFETY = 25                 # MDBList requests always left unused
 BATCH = 200                 # titles asked for in one MDBList request (halved if MDBList refuses that many)
 SEED_EVERY_DAYS = 7
+# Certified Fresh, as Rotten Tomatoes gives it: a critics score of 75% or more, on at least this many critics' reviews.
+CERTIFIED = {'movie': (75, 80), 'tv': (75, 20)}
 MAX_MINUTES = 100           # stop looking up in time to save everything before the job's limit
 SAMPLES = [('movie', 238, 'The Godfather'), ('movie', 769, 'GoodFellas'), ('movie', 278, 'The Shawshank Redemption'),
            ('tv', 1398, 'The Sopranos'), ('tv', 1396, 'Breaking Bad')]
@@ -92,7 +96,7 @@ def day_of(date):
 
 # ---------------------------------------------------------------- 1. the titles to rate
 def seed(kind):
-    """Every movie / show on TMDb with MIN_VOTES votes or more: {id: [release day, votes]}. TMDb pages stop at 500, so it goes year by year."""
+    """Every movie / show on TMDb with MIN_VOTES votes or more: {id: [release day, votes, name]}. TMDb pages stop at 500, so it goes year by year."""
     out = {}
     path = 'movie' if kind == 'movie' else 'tv'
     year_key = 'primary_release_year' if kind == 'movie' else 'first_air_date_year'
@@ -114,7 +118,7 @@ def seed(kind):
             pages = int(data.get('total_pages') or 0)
             for r in data.get('results') or []:
                 if r.get('id'):
-                    out[str(r['id'])] = [day_of(r.get(date_key) or ''), int(r.get('vote_count') or 0)]
+                    out[str(r['id'])] = [day_of(r.get(date_key) or ''), int(r.get('vote_count') or 0), str(r.get('title') or r.get('name') or '')]
             page += 1
     say('TMDb %s list: %d titles with %d+ votes (%d requests)' % (kind, len(out), MIN_VOTES, calls))
     return out
@@ -137,9 +141,21 @@ def allowance():
 sources_seen = set()
 
 
+tomato_seen = []
+
+
+def count_of(r):
+    """How many reviews / votes a rating stands on, -1 when MDBList does not say."""
+    v = r.get('votes')
+    if isinstance(v, str):
+        v = v.replace(',', '').strip()
+        v = int(v) if v.isdigit() else None
+    return int(v) if isinstance(v, (int, float)) and v >= 0 else -1
+
+
 def scores(item):
-    """(critics, audience) from one MDBList title: Rotten Tomatoes' Tomatometer and audience score, -1 when missing."""
-    critics, audience = -1, -1
+    """(critics, audience, reviews) from one MDBList title: Rotten Tomatoes' Tomatometer, audience score and the number of critics' reviews, -1 when missing."""
+    critics, audience, reviews = -1, -1, -1
     for r in item.get('ratings') or []:
         src = str(r.get('source') or '').lower()
         sources_seen.add(src)
@@ -155,16 +171,19 @@ def scores(item):
             continue
         if src == 'tomatoes':
             critics = int(round(v))
+            reviews = count_of(r)
+            if len(tomato_seen) < 3:
+                tomato_seen.append({k: r.get(k) for k in r if k != 'url'})
         elif src in ('tomatoesaudience', 'popcorn', 'audience'):
             audience = int(round(v))
-    return critics, audience
+    return critics, audience, reviews
 
 
 single_get = [False]      # one title at a time goes straight to the plain address once a one-title request was refused
 
 
 def lookup(kind, ids, batch):
-    """MDBList for these TMDb ids: ({id: (critics, audience)}, requests used, batch size that worked). Ids MDBList does not know come back missing."""
+    """MDBList for these TMDb ids: ({id: (critics, audience, reviews)}, requests used, batch size that worked). Ids MDBList does not know come back missing."""
     mtype = 'movie' if kind == 'movie' else 'show'
     url = '%s/tmdb/%s?%s' % (MDB, mtype, urllib.parse.urlencode({'apikey': MKEY}))
     if len(ids) == 1 and single_get[0]:
@@ -202,7 +221,8 @@ def main():
     state = load('state.json.gz', {})
     rated = {k: state.get('rated', {}).get(k, {}) for k in ('movie', 'tv')}      # id -> [critics, audience, day checked]
     wanted = state.get('wanted', {})
-    if not wanted.get('movie') or TODAY - int(state.get('seeded', 0)) >= SEED_EVERY_DAYS:
+    named = all(len(v) >= 3 for kind in ('movie', 'tv') for v in list(wanted.get(kind, {}).values())[:50])
+    if not wanted.get('movie') or not named or not 0 <= TODAY - int(state.get('seeded', 0)) < SEED_EVERY_DAYS:
         wanted = {'movie': seed('movie'), 'tv': seed('tv')}
         state['seeded'] = TODAY
     else:
@@ -212,6 +232,8 @@ def main():
         r = rated[kind].get(tid)
         if r is None:
             return True
+        if len(r) < 4:
+            return True         # looked up before review counts were kept: once more
         age = TODAY - r[2]
         rel = wanted[kind].get(tid, [-1, 0])[0]
         since = TODAY - rel if rel >= 0 else 99999
@@ -262,8 +284,8 @@ def main():
             say('MDBList refused a single title (%s) - stopping for today' % (info,))
             break
         for tid in ids:
-            c, a = got.get(tid, (-1, -1))
-            rated[kind][tid] = [c, a, TODAY]
+            c, a, n = got.get(tid, (-1, -1, -1))
+            rated[kind][tid] = [c, a, TODAY, n]
         looked += len(ids)
         if not measured:
             measured = True
@@ -281,9 +303,19 @@ def main():
     state['rated'] = rated
     state['wanted'] = wanted
     save('state.json.gz', state)
-    out = {'v': 1, 'made': int(time.time())}
+    out = {'v': 2, 'made': int(time.time()), 'certified': {}}
     for kind in ('movie', 'tv'):
-        out[kind] = {tid: [r[0], r[1]] for tid, r in rated[kind].items() if r[0] >= 0 or r[1] >= 0}
+        out[kind] = {tid: [r[0], r[1], r[3] if len(r) > 3 else -1] for tid, r in rated[kind].items() if r[0] >= 0 or r[1] >= 0}
+        low, reviews = CERTIFIED[kind]
+        best = []
+        for tid, r in rated[kind].items():
+            w = wanted[kind].get(tid)
+            if w is None or len(w) < 3 or not w[2] or r[0] < low or len(r) < 4 or r[3] < reviews:
+                continue
+            year = datetime.date.fromordinal(datetime.date(1970, 1, 1).toordinal() + w[0]).year if w[0] >= 0 else 0
+            best.append((-r[0], -r[3], w[2], int(tid), year))
+        best.sort()
+        out['certified'][kind] = [[i, name, year] for _, _, name, i, year in best]
     save('ratings.json.gz', out)
 
     lines = ['Premierium ratings - run of %s UTC (took %d:%02d)' % (datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M'), (time.time() - T0) // 60, (time.time() - T0) % 60), '']
@@ -296,11 +328,16 @@ def main():
     lines.append('Rating sources MDBList gave: ' + (', '.join(sorted(sources_seen)) or '(none this run)'))
     if cost_note:
         lines.append('Allowance: ' + cost_note)
+    lines.append('Certified Fresh: %d movies, %d shows' % (len(out['certified']['movie']), len(out['certified']['tv'])))
+    with_n = sum(1 for kind in ('movie', 'tv') for r in rated[kind].values() if len(r) > 3 and r[3] >= 0)
+    lines.append('Titles with a review count: %d' % with_n)
+    if tomato_seen:
+        lines.append('How MDBList gives the critics score: ' + json.dumps(tomato_seen[:2]))
     lines.append('')
     lines.append('Samples (critics / audience):')
     for kind, tid, name in SAMPLES:
         r = rated[kind].get(str(tid))
-        lines.append('  %s: %s' % (name, ('%s / %s' % (r[0], r[1])) if r else 'not looked up yet'))
+        lines.append('  %s: %s' % (name, ('%s / %s, %s reviews' % (r[0], r[1], r[3] if len(r) > 3 else '?')) if r else 'not looked up yet'))
     lines.append('')
     lines.append('Run log:')
     lines += ['  ' + hide(l) for l in log]
@@ -312,8 +349,8 @@ def main():
 if __name__ == '__main__':
     try:
         main()
-    except SystemExit as e:
-        msg = hide(e)
+    except (SystemExit, Exception) as e:
+        msg = hide('%s: %s' % (type(e).__name__, e)) if not isinstance(e, SystemExit) else hide(e)
         with open('report.txt', 'w', encoding='utf-8') as f:
             f.write('Premierium ratings - run of %s UTC FAILED\n\n%s\n\nRun log:\n%s\n' % (datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M'), msg, '\n'.join('  ' + hide(l) for l in log)))
         print('::error::' + msg)
