@@ -1,4 +1,4 @@
-Premierium ratings - run of 2026-10-19 14:42 UTC (took 0:02)
+Premierium ratings - run of 2026-10-20 12:45 UTC (took 0:03)
 
 Movies: 106040 to rate, 106040 looked up, 30232 with a critics score, 60128 with an audience score, 61525 in the file
 Shows: 19685 to rate, 19685 looked up, 4038 with a critics score, 5554 with an audience score, 6027 in the file
@@ -15,7 +15,7 @@ Samples (critics / audience):
   Breaking Bad: 96 / 97, 250 reviews
 
 Run log:
-  TMDb list from 2 day(s) ago: 106040 movies, 19685 shows
+  TMDb list from 3 day(s) ago: 106040 movies, 19685 shows
   Waiting: 0 never looked up, 0 due a re-check
   MDBList allowance: 1000, used today: 0 - this run may use 975
   Looked up 0 titles in 0 MDBList requests (batch size 200)
