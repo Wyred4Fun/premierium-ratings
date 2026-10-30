@@ -1,0 +1,61 @@
+name: Build films
+
+# Once a day, after the ratings job: the running time and release year of every well-known film (the ratings job's list), and the cast of
+# films that share a name, published as film_index.json.gz in the "films" release, where every Premierium box reads it to tell which film
+# a TV program is and its year, with no lookup of its own. Each run carries on from the last one (films_state.json.gz, in the same release).
+# films_report.txt says what the last run did. Needs the TMDB_KEY secret (the ratings job's).
+on:
+  schedule:
+    - cron: '43 9 * * *'
+  workflow_dispatch:
+  push:
+    paths:
+      - 'films.py'
+      - '.github/workflows/films.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: films
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Get this repo
+        uses: actions/checkout@v4
+
+      - name: Get the film list (the ratings job's) and the last run's file
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # (review) The ratings job may be replacing this file at this very moment (--clobber): once more after a minute.
+          gh release download latest -p state.json.gz || (sleep 60 && gh release download latest -p state.json.gz --clobber)
+          gh release download films -p films_state.json.gz || echo "No earlier run - starting fresh"
+
+      - name: Look up the films
+        env:
+          TMDB_KEY: ${{ secrets.TMDB_KEY }}
+        run: python3 films.py
+
+      - name: Publish them
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view films >/dev/null 2>&1 || \
+            gh release create films --latest=false --title "Films" --notes "Film running times and years for Premierium, rebuilt automatically."
+          gh release upload films film_index.json.gz films_state.json.gz --clobber
+
+      - name: Save the report
+        if: always()
+        run: |
+          [ -f films_report.txt ] || exit 0
+          git config user.name "films-bot"
+          git config user.email "films-bot@users.noreply.github.com"
+          git add films_report.txt
+          git commit -m "films report" || true
+          git pull --rebase || true
+          git push || true
