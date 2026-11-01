@@ -1,13 +1,13 @@
-Premierium ratings - run of 2026-10-31 13:53 UTC (took 13:24)
+Premierium ratings - run of 2026-11-01 14:18 UTC (took 0:05)
 
 Movies: 106367 to rate, 106384 looked up, 30276 with a critics score, 60208 with an audience score, 61616 in the file
-Shows: 19803 to rate, 19809 looked up, 4049 with a critics score, 5559 with an audience score, 6039 in the file
+Shows: 19803 to rate, 19809 looked up, 4048 with a critics score, 5560 with an audience score, 6038 in the file
 Never looked up yet: 0
 Rating sources MDBList gave: imdb, letterboxd, metacritic, metacriticuser, myanimelist, popcorn, rogerebert, tmdb, tomatoes, trakt
-Allowance: one request for 164 titles counted 1 against the allowance
-Certified Fresh: 2875 movies, 1412 shows
-Titles with a review count: 34309
-How MDBList gives the critics score: [{"source": "tomatoes", "value": 96, "score": 96, "votes": 45, "fresh": 1}, {"source": "tomatoes", "value": 100, "score": 100, "votes": 99, "fresh": 1}]
+Allowance: one request for 48 titles counted 1 against the allowance
+Certified Fresh: 2875 movies, 1411 shows
+Titles with a review count: 34308
+How MDBList gives the critics score: [{"source": "tomatoes", "value": 66, "score": 66, "votes": 364, "fresh": 0}, {"source": "tomatoes", "value": 63, "score": 63, "votes": 97, "fresh": 0}]
 
 Samples (critics / audience):
   The Godfather: 97 / 98, 155 reviews
@@ -17,9 +17,8 @@ Samples (critics / audience):
   Breaking Bad: 96 / 97, 250 reviews
 
 Run log:
-  TMDb movie list: 106367 titles with 10+ votes (5380 requests)
-  TMDb tv list: 19803 titles with 10+ votes (1081 requests)
-  Waiting: 223 never looked up, 525 due a re-check
+  TMDb list from 1 day(s) ago: 106367 movies, 19803 shows
+  Waiting: 0 never looked up, 294 due a re-check
   MDBList allowance: 1000, used today: 0 - this run may use 975
-  MDBList: one request for 164 titles counted 1 against the allowance
-  Looked up 748 titles in 5 MDBList requests (batch size 200)
+  MDBList: one request for 48 titles counted 1 against the allowance
+  Looked up 294 titles in 3 MDBList requests (batch size 200)
