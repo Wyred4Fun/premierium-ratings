@@ -1,4 +1,4 @@
-Premierium films - run of 2026-11-07 15:55 UTC (took 0:12)
+Premierium films - run of 2026-11-08 16:20 UTC (took 0:02)
 
 Films in the ratings list: 106550; looked up: 106570; with a running time: 105549; never looked up yet: 0
 
@@ -8,8 +8,8 @@ Samples:
   casablanca: [[1943, 102, ["Humphrey Bogart", "Ingrid Bergman", "Paul Henreid", "Claude Rains", "Conrad Veidt", "Sydney Greenstreet", "Peter Lorre", "S.Z. Sakall", "Madeleine Lebeau", "Dooley Wilson"]], [2019, 105, ["Amir Karara", "Ghada Adel", "Eyad Nassar", "Amr Abdel Gelil", "Halit Ergenç", "Mahmoud El-Bezzaw
 
 Run log:
-  Film list from the ratings job: 106550 films; looked up before: 106376
+  Film list from the ratings job: 106550 films; looked up before: 106570
   Names shared by two or more films: 7092 (18873 films)
-  To look up this run: 240
-  Looked up: 240 (0 could not be asked); all done
+  To look up this run: 0
+  Looked up: 0 (0 could not be asked); all done
   In the file: 93839 names, 105515 films
