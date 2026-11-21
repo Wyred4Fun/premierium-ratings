@@ -1,11 +1,13 @@
-Premierium ratings - run of 2026-11-20 16:11 UTC (took 0:02)
+Premierium ratings - run of 2026-11-21 15:37 UTC (took 12:48)
 
-Movies: 106706 to rate, 106752 looked up, 30325 with a critics score, 60290 with an audience score, 61714 in the file
-Shows: 19928 to rate, 19937 looked up, 4064 with a critics score, 5570 with an audience score, 6055 in the file
+Movies: 107508 to rate, 107562 looked up, 30349 with a critics score, 60354 with an audience score, 61781 in the file
+Shows: 20030 to rate, 20040 looked up, 4070 with a critics score, 5574 with an audience score, 6063 in the file
 Never looked up yet: 0
-Rating sources MDBList gave: (none this run)
-Certified Fresh: 2887 movies, 1415 shows
-Titles with a review count: 34373
+Rating sources MDBList gave: imdb, letterboxd, metacritic, metacriticuser, myanimelist, popcorn, rogerebert, tmdb, tomatoes, trakt
+Allowance: one request for 200 titles counted 1 against the allowance
+Certified Fresh: 2889 movies, 1417 shows
+Titles with a review count: 34403
+How MDBList gives the critics score: [{"source": "tomatoes", "value": 76, "score": 76, "votes": 120, "fresh": 1}, {"source": "tomatoes", "value": 90, "score": 90, "votes": 10, "fresh": 0}]
 
 Samples (critics / audience):
   The Godfather: 97 / 98, 155 reviews
@@ -15,7 +17,9 @@ Samples (critics / audience):
   Breaking Bad: 96 / 97, 250 reviews
 
 Run log:
-  TMDb list from 6 day(s) ago: 106706 movies, 19928 shows
-  Waiting: 0 never looked up, 0 due a re-check
+  TMDb movie list: 107508 titles with 10+ votes (5438 requests)
+  TMDb tv list: 20030 titles with 10+ votes (1089 requests)
+  Waiting: 913 never looked up, 36 due a re-check
   MDBList allowance: 1000, used today: 0 - this run may use 975
-  Looked up 0 titles in 0 MDBList requests (batch size 200)
+  MDBList: one request for 200 titles counted 1 against the allowance
+  Looked up 949 titles in 8 MDBList requests (batch size 200)
